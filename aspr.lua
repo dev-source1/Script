@@ -1,181 +1,211 @@
--- Mock Pets + Trade UI (Client-side only - Educational/Fake)
-local Players = game:GetService("Players")
-local LP = Players.LocalPlayer
+-- سكربت نسخ الحيوانات والتداول لروبلوكس
+-- Save هذا السكربت في LocalScript داخل StarterGui
 
--- Fake inventory data
-local pets = {
-    {name="Dragon", rarity="Legendary"},
-    {name="Phoenix", rarity="Legendary"},
-    {name="Wolf", rarity="Rare"},
-    {name="Cat", rarity="Common"},
-    {name="Dog", rarity="Common"},
-    {name="Tiger", rarity="Epic"},
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local player = Players.LocalPlayer
+
+-- تأكد من تعديل هذه الأسماء وفقًا للعبة
+local REMOTE_NAMES = {
+    TRADE_REQUEST = "TradeRequest",
+    TRADE_ADD_ITEM = "TradeAddItem",
+    TRADE_ACCEPT = "TradeAccept",
+    CLONE_PET = "ClonePet"
 }
 
--- UI
-local gui = Instance.new("ScreenGui")
-gui.Name = "FakeTradePetsUI"
-gui.ResetOnSpawn = false
-gui.Parent = LP:WaitForChild("PlayerGui")
-
-local function createCard(pet)
-    local c = Instance.new("Frame")
-    c.BackgroundColor3 = Color3.fromRGB(40,40,40)
-    c.Size = UDim2.new(1, -8, 0, 46)
-    c.BorderSizePixel = 0
-
-    local lbl = Instance.new("TextLabel")
-    lbl.Parent = c
-    lbl.BackgroundTransparency = 1
-    lbl.Size = UDim2.new(1, -100, 1, 0)
-    lbl.Position = UDim2.new(0, 8, 0, 0)
-    lbl.Font = Enum.Font.GothamBold
-    lbl.TextXAlignment = Enum.TextXAlignment.Left
-    lbl.Text = pet.name .. "  •  " .. pet.rarity
-    lbl.TextColor3 = Color3.fromRGB(255,255,255)
-    lbl.TextScaled = true
-
-    local add = Instance.new("TextButton")
-    add.Parent = c
-    add.Size = UDim2.new(0, 90, 0, 32)
-    add.Position = UDim2.new(1, -96, 0.5, -16)
-    add.Text = "Add to Trade"
-    add.Font = Enum.Font.Gotham
-    add.TextScaled = true
-    add.BackgroundColor3 = Color3.fromRGB(70,70,70)
-    add.TextColor3 = Color3.fromRGB(255,255,255)
-    add.AutoButtonColor = true
-
-    return c, add
+-- البحث عن الريموتس
+local events = {}
+for name, remoteName in pairs(REMOTE_NAMES) do
+    events[name] = ReplicatedStorage:FindFirstChild(remoteName) or 
+                  ReplicatedStorage:FindFirstChild("Events"):FindFirstChild(remoteName) or
+                  ReplicatedStorage:FindFirstChild("Remotes"):FindFirstChild(remoteName)
 end
 
-local function rounded(obj, radius)
-    local ui = Instance.new("UICorner")
-    ui.CornerRadius = UDim.new(0, radius)
-    ui.Parent = obj
-end
+-- واجهة المستخدم
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "AnimalTradeGUI"
+ScreenGui.Parent = player.PlayerGui
 
-local container = Instance.new("Frame")
-container.Parent = gui
-container.Size = UDim2.new(0.9, 0, 0.8, 0)
-container.Position = UDim2.new(0.05, 0, 0.1, 0)
-container.BackgroundColor3 = Color3.fromRGB(25,25,25)
-rounded(container, 16)
+local MainFrame = Instance.new("Frame")
+MainFrame.Size = UDim2.new(0, 300, 0, 350)
+MainFrame.Position = UDim2.new(0.5, -150, 0.5, -175)
+MainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+MainFrame.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+MainFrame.BorderSizePixel = 0
+MainFrame.Parent = ScreenGui
 
-local title = Instance.new("TextLabel")
-title.Parent = container
-title.BackgroundTransparency = 1
-title.Size = UDim2.new(1, -20, 0, 40)
-title.Position = UDim2.new(0, 10, 0, 10)
-title.Font = Enum.Font.GothamBlack
-title.Text = "Fake Pets Inventory & Trade (Client-side demo)"
-title.TextColor3 = Color3.fromRGB(255,255,255)
-title.TextScaled = true
-title.TextXAlignment = Enum.TextXAlignment.Left
+local UICorner = Instance.new("UICorner")
+UICorner.CornerRadius = UDim.new(0, 8)
+UICorner.Parent = MainFrame
 
-local left = Instance.new("Frame")
-left.Parent = container
-left.Size = UDim2.new(0.5, -15, 1, -70)
-left.Position = UDim2.new(0, 10, 0, 60)
-left.BackgroundColor3 = Color3.fromRGB(30,30,30)
-rounded(left, 12)
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, 0, 0, 40)
+Title.Position = UDim2.new(0, 0, 0, 0)
+Title.BackgroundColor3 = Color3.fromRGB(30, 136, 229)
+Title.Text = "نظام نسخ وتداول الحيوانات"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.Font = Enum.Font.GothamBold
+Title.TextSize = 16
+Title.Parent = MainFrame
 
-local right = Instance.new("Frame")
-right.Parent = container
-right.Size = UDim2.new(0.5, -15, 1, -70)
-right.Position = UDim2.new(0.5, 5, 0, 60)
-right.BackgroundColor3 = Color3.fromRGB(30,30,30)
-rounded(right, 12)
+local UICorner2 = Instance.new("UICorner")
+UICorner2.CornerRadius = UDim.new(0, 8)
+UICorner2.Parent = Title
 
-local invTitle = Instance.new("TextLabel")
-invTitle.Parent = left
-invTitle.BackgroundTransparency = 1
-invTitle.Size = UDim2.new(1, -20, 0, 32)
-invTitle.Position = UDim2.new(0, 10, 0, 8)
-invTitle.Font = Enum.Font.GothamBold
-invTitle.Text = "Your Pets (Mock)"
-invTitle.TextColor3 = Color3.fromRGB(255,255,255)
-invTitle.TextScaled = true
-invTitle.TextXAlignment = Enum.TextXAlignment.Left
+local AnimalsList = Instance.new("ScrollingFrame")
+AnimalsList.Size = UDim2.new(0.9, 0, 0, 150)
+AnimalsList.Position = UDim2.new(0.05, 0, 0.15, 0)
+AnimalsList.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+AnimalsList.BorderSizePixel = 0
+AnimalsList.AutomaticCanvasSize = Enum.AutomaticSize.Y
+AnimalsList.ScrollBarThickness = 5
+AnimalsList.Parent = MainFrame
 
-local tradeTitle = Instance.new("TextLabel")
-tradeTitle.Parent = right
-tradeTitle.BackgroundTransparency = 1
-tradeTitle.Size = UDim2.new(1, -20, 0, 32)
-tradeTitle.Position = UDim2.new(0, 10, 0, 8)
-tradeTitle.Font = Enum.Font.GothamBold
-tradeTitle.Text = "Trade Window (Local)"
-tradeTitle.TextColor3 = Color3.fromRGB(255,255,255)
-tradeTitle.TextScaled = true
-tradeTitle.TextXAlignment = Enum.TextXAlignment.Left
+local UIListLayout = Instance.new("UIListLayout")
+UIListLayout.Parent = AnimalsList
 
-local invList = Instance.new("ScrollingFrame")
-invList.Parent = left
-invList.Size = UDim2.new(1, -20, 1, -60)
-invList.Position = UDim2.new(0, 10, 0, 50)
-invList.CanvasSize = UDim2.new(0, 0, 0, 0)
-invList.ScrollBarThickness = 6
-invList.BackgroundTransparency = 1
+local CloneButton = Instance.new("TextButton")
+CloneButton.Size = UDim2.new(0.9, 0, 0, 40)
+CloneButton.Position = UDim2.new(0.05, 0, 0.55, 0)
+CloneButton.BackgroundColor3 = Color3.fromRGB(76, 175, 80)
+CloneButton.Text = "نسخ الحيوان المحدد"
+CloneButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+CloneButton.Font = Enum.Font.GothamBold
+CloneButton.TextSize = 14
+CloneButton.Parent = MainFrame
 
-local tradeList = Instance.new("ScrollingFrame")
-tradeList.Parent = right
-tradeList.Size = UDim2.new(1, -20, 1, -110)
-tradeList.Position = UDim2.new(0, 10, 0, 50)
-tradeList.CanvasSize = UDim2.new(0, 0, 0, 0)
-tradeList.ScrollBarThickness = 6
-tradeList.BackgroundTransparency = 1
+local UICorner3 = Instance.new("UICorner")
+UICorner3.CornerRadius = UDim.new(0, 6)
+UICorner3.Parent = CloneButton
 
-local confirm = Instance.new("TextButton")
-confirm.Parent = right
-confirm.Size = UDim2.new(1, -20, 0, 44)
-confirm.Position = UDim2.new(0, 10, 1, -52)
-confirm.Text = "Confirm (Demo)"
-confirm.Font = Enum.Font.GothamBold
-confirm.TextScaled = true
-confirm.BackgroundColor3 = Color3.fromRGB(60,120,60)
-confirm.TextColor3 = Color3.fromRGB(255,255,255)
-rounded(confirm, 10)
+local TargetPlayerBox = Instance.new("TextBox")
+TargetPlayerBox.Size = UDim2.new(0.9, 0, 0, 40)
+TargetPlayerBox.Position = UDim2.new(0.05, 0, 0.68, 0)
+TargetPlayerBox.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+TargetPlayerBox.PlaceholderText = "اسم اللاعب للتداول"
+TargetPlayerBox.Text = ""
+TargetPlayerBox.TextColor3 = Color3.fromRGB(0, 0, 0)
+TargetPlayerBox.Font = Enum.Font.Gotham
+TargetPlayerBox.TextSize = 14
+TargetPlayerBox.Parent = MainFrame
 
-local tradePets = {}
+local UICorner4 = Instance.new("UICorner")
+UICorner4.CornerRadius = UDim.new(0, 6)
+UICorner4.Parent = TargetPlayerBox
 
-local function refreshList(frame)
-    local y = 0
-    for _, child in ipairs(frame:GetChildren()) do
-        if child:IsA("Frame") then child:Destroy() end
+local TradeButton = Instance.new("TextButton")
+TradeButton.Size = UDim2.new(0.9, 0, 0, 40)
+TradeButton.Position = UDim2.new(0.05, 0, 0.82, 0)
+TradeButton.BackgroundColor3 = Color3.fromRGB(156, 39, 176)
+TradeButton.Text = "بدء التداول"
+TradeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+TradeButton.Font = Enum.Font.GothamBold
+TradeButton.TextSize = 14
+TradeButton.Parent = MainFrame
+
+local UICorner5 = Instance.new("UICorner")
+UICorner5.CornerRadius = UDim.new(0, 6)
+UICorner5.Parent = TradeButton
+
+-- متغيرات
+local selectedAnimal = nil
+local playerAnimals = {}
+
+-- وظيفة البحث عن الحيوانات
+local function findPlayerAnimals()
+    playerAnimals = {}
+    AnimalsList:ClearAllChildren()
+    
+    -- البحث في workspace
+    local animalsFolder = workspace:FindFirstChild("Pets") or 
+                         workspace:FindFirstChild("Animals") or
+                         workspace:FindFirstChild("PetsFolder")
+    
+    if animalsFolder then
+        for _, animal in pairs(animalsFolder:GetChildren()) do
+            if animal:FindFirstChild("Owner") and animal.Owner.Value == player then
+                table.insert(playerAnimals, animal)
+                
+                local animalButton = Instance.new("TextButton")
+                animalButton.Size = UDim2.new(1, -10, 0, 30)
+                animalButton.Position = UDim2.new(0, 5, 0, 0)
+                animalButton.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+                animalButton.Text = animal.Name
+                animalButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+                animalButton.Font = Enum.Font.Gotham
+                animalButton.TextSize = 12
+                animalButton.Parent = AnimalsList
+                
+                animalButton.MouseButton1Click:Connect(function()
+                    selectedAnimal = animal
+                    for _, btn in pairs(AnimalsList:GetChildren()) do
+                        if btn:IsA("TextButton") then
+                            btn.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+                        end
+                    end
+                    animalButton.BackgroundColor3 = Color3.fromRGB(30, 136, 229)
+                end)
+            end
+        end
     end
-    for _, pet in ipairs(pets) do
-        local card, addBtn = createCard(pet)
-        card.Parent = frame
-        card.Position = UDim2.new(0, 0, 0, y)
-        rounded(card, 8)
-        y = y + 52
-        addBtn.MouseButton1Click:Connect(function()
-            table.insert(tradePets, pet)
-            local t = Instance.new("TextLabel")
-            t.Parent = tradeList
-            t.BackgroundColor3 = Color3.fromRGB(45,45,45)
-            t.Size = UDim2.new(1, -8, 0, 38)
-            t.Position = UDim2.new(0, 0, 0, (#tradeList:GetChildren()-1)*40)
-            t.Text = pet.name .. " (" .. pet.rarity .. ")"
-            t.Font = Enum.Font.Gotham
-            t.TextScaled = true
-            t.TextColor3 = Color3.fromRGB(255,255,255)
-            rounded(t, 8)
-            tradeList.CanvasSize = UDim2.new(0, 0, 0, (#tradeList:GetChildren()-1)*40)
-        end)
+    
+    if #playerAnimals == 0 then
+        local noPetsLabel = Instance.new("TextLabel")
+        noPetsLabel.Size = UDim2.new(1, 0, 0, 30)
+        noPetsLabel.BackgroundTransparency = 1
+        noPetsLabel.Text = "لا تمتلك أي حيوانات"
+        noPetsLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+        noPetsLabel.Font = Enum.Font.Gotham
+        noPetsLabel.TextSize = 14
+        noPetsLabel.Parent = AnimalsList
     end
-    frame.CanvasSize = UDim2.new(0, 0, 0, y)
 end
 
-refreshList(invList)
-
-confirm.MouseButton1Click:Connect(function()
-    local names = {}
-    for _, p in ipairs(tradePets) do table.insert(names, p.name) end
-    local msg = "Trade (LOCAL DEMO) confirmed with pets: " .. (table.concat(names, ", "))
-    game:GetService("StarterGui"):SetCore("SendNotification", {
-        Title = "Trade Demo",
-        Text = msg ~= "" and msg or "No pets added.",
-        Duration = 4
-    })
+-- نسخ الحيوان
+CloneButton.MouseButton1Click:Connect(function()
+    if selectedAnimal then
+        if events.CLONE_PET then
+            events.CLONE_PET:FireServer(selectedAnimal)
+        else
+            -- محاولة نسخ الحيوان يدوياً إذا لم يوجد ريموت
+            local clone = selectedAnimal:Clone()
+            clone.Parent = selectedAnimal.Parent
+            clone:MoveTo(player.Character.HumanoidRootPart.Position + Vector3.new(0, 5, 0))
+        end
+    end
 end)
+
+-- بدء التداول
+TradeButton.MouseButton1Click:Connect(function()
+    if selectedAnimal and TargetPlayerBox.Text ~= "" then
+        local targetPlayer = nil
+        for _, p in pairs(Players:GetPlayers()) do
+            if p.Name:lower():find(TargetPlayerBox.Text:lower()) or p.DisplayName:lower():find(TargetPlayerBox.Text:lower()) then
+                targetPlayer = p
+                break
+            end
+        end
+        
+        if targetPlayer then
+            if events.TRADE_REQUEST then
+                events.TRADE_REQUEST:FireServer(targetPlayer)
+                
+                -- إضافة الحيوان للتداول بعد ثانية
+                wait(1)
+                if events.TRADE_ADD_ITEM then
+                    events.TRADE_ADD_ITEM:FireServer(selectedAnimal)
+                end
+            else
+                warn("لم يتم العثور على حدث التداول في اللعبة")
+            end
+        else
+            warn("لم يتم العثور على اللاعب: " .. TargetPlayerBox.Text)
+        end
+    end
+end)
+
+-- تحديث قائمة الحيوانات كل 5 ثواني
+while true do
+    findPlayerAnimals()
+    wait(5)
+end
